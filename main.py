@@ -1,16 +1,70 @@
-# This is a sample Python script.
+import hashlib
+import random
+import string
+import json
+import binascii
+import numpy as np
+import pandas as pd
+import pylab as pl
+import logging
+import datetime
+import collections
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import Crypto
+import Crypto.Random
+from Crypto.Hash import SHA
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+class Client():
+    def __init__(self):
+        _random = Crypto.Random.new().read
+        self._private_key = RSA.generate(1024, _random)
+        self._public_key = self._private_key.publickey()
+        self._signer = PKCS1_v1_5.new(self._private_key)
+
+    @property
+    def identity(self):
+        return binascii.hexlify(self._public_key.exportKey(format="DER")).decode("ascii")
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+class Transaction():
+    def __init__(self, sender, recipient, value):
+        self.sender = sender
+        self.recipient = recipient
+        self.value = value
+        self.time = datetime.datetime.now()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    def to_dict(self):
+        if self.sender == "Genesis":
+            identity = "Genesis"
+        else:
+            identity = self.sender.identity
+
+        return collections.OrderedDict({
+            "sender": self.sender,
+            "recipient": self.recipient,
+            "value": self.value,
+            "time": self.time,
+        })
+
+    def sign_transaction(self):
+        private_key = self.sender._private_key
+        signer = PKCS1_v1_5.new(private_key)
+        h = SHA.new(str(self.to_dict()).encode('utf-8'))
+        return binascii.hexlify(signer.sign(h)).decode('ascii')
+
+    print("hello shanto")
+
+
+dinesh = Client()
+print(dinesh.identity)
+Ramesh = Client()
+
+t = Transaction(dinesh,
+                Ramesh.identity,
+                5.0
+                )
+signature = t.sign_transaction()
+print(signature)
